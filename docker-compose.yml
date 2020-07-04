@@ -1,0 +1,72 @@
+version: '3'
+services:
+  userver-postgres:
+    container_name: userver-postgres
+    restart: unless-stopped
+    build:
+      context: ./postgres
+      dockerfile: Dockerfile
+    env_file:
+      - ./postgres/.env
+    volumes:
+      - ./postgres/config:/etc/postgresql/config
+      - dbdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  userver-redis:
+    image: redis
+    container_name: userver-redis
+    restart: unless-stopped
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+    ports:
+      - "6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
+
+  userver-adminer:
+    image: adminer
+    container_name: userver-adminer
+    restart: unless-stopped
+    env_file:
+      - ./adminer/.env
+    depends_on:
+      - userver-postgres
+    expose:
+      - 8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  userver-databackup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    container_name: userver-databackup
+    restart: unless-stopped
+    env_file:
+      - ./backup/.env
+    volumes:
+      - ./backup/scripts:/scripts
+      - ./backup/temp:/temp
+    depends_on:
+      - userver-postgres
+
+networks:
+  default:
+    external:
+      name: nginx-proxy
+
+volumes:
+  dbdata:
