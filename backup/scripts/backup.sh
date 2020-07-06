@@ -127,7 +127,7 @@ fi
 
 echo "Uploading dump to $S3_BUCKET"
 cat $LOCAL_FILE | aws $AWS_ARGS s3 cp - s3://$S3_BUCKET/$S3_PREFIX/$DEST_FILE || exit 2
-echo "Upload complete!"
+echo "Upload complete! File was uploaded to: $S3_PREFIX/$DEST_FILE"
 echo "Removing temp file..."
 rm "$LOCAL_FILE"
 
