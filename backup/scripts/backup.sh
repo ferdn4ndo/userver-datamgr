@@ -3,9 +3,7 @@
 set -e
 set -o pipefail
 
-echo "=============================="
-echo "== Database Backup Creation =="
-echo "=============================="
+echo "=== Database Backup Creation ==="
 
 ########################################################
 ## Environment check section
@@ -65,7 +63,7 @@ export PGPASSWORD=$POSTGRES_PASSWORD
 POSTGRES_HOST_OPTS="-h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER $POSTGRES_EXTRA_OPTS"
 
 # prepare temp folder
-mkdir -p ${TEMP_PATH}
+mkdir -p "${TEMP_PATH}"
 
 ########################################################
 ## Dump section
@@ -75,10 +73,12 @@ DEST_FILE=${BACKUP_PREFIX}_$(date +"%Y-%m-%dT%H-%M-%SZ").sql
 LOCAL_FILE="${TEMP_PATH}/${DEST_FILE}"
 if [ "${POSTGRES_DATABASE}" != "" ]; then
   echo "Creating dump of ${POSTGRES_DATABASE} database from ${POSTGRES_HOST}..."
-  pg_dump $POSTGRES_HOST_OPTS $POSTGRES_DATABASE > $LOCAL_FILE
+  # shellcheck disable=SC2086
+  pg_dump $POSTGRES_HOST_OPTS "$POSTGRES_DATABASE" > "$LOCAL_FILE"
 else
   echo "Creating dump of all databases from ${POSTGRES_HOST}..."
-  pg_dumpall $POSTGRES_HOST_OPTS > $LOCAL_FILE
+  # shellcheck disable=SC2086
+  pg_dumpall $POSTGRES_HOST_OPTS > "$LOCAL_FILE"
 fi
 echo "Created dump file ${LOCAL_FILE}"
 
@@ -126,7 +126,9 @@ fi
 ########################################################
 
 echo "Uploading dump to $S3_BUCKET"
-cat $LOCAL_FILE | aws $AWS_ARGS s3 cp - s3://$S3_BUCKET/$S3_PREFIX/$DEST_FILE || exit 2
+# shellcheck disable=SC2086
+UPLOAD_RESULT=$(aws $AWS_ARGS s3 cp - "s3://$S3_BUCKET/$S3_PREFIX/$DEST_FILE" < "$LOCAL_FILE")
+echo "Upload result: ${UPLOAD_RESULT}"
 echo "Upload complete! File was uploaded to: $S3_PREFIX/$DEST_FILE"
 echo "Removing temp file..."
 rm "$LOCAL_FILE"
@@ -136,18 +138,21 @@ rm "$LOCAL_FILE"
 ########################################################
 if [ "${DELETE_OLDER_THAN}" != "" ]; then
   >&2 echo "Checking for files older than ${DELETE_OLDER_THAN}"
-  aws $AWS_ARGS s3 ls s3://$S3_BUCKET/$S3_PREFIX/ | grep " PRE " -v | while read -r line;
+  # shellcheck disable=SC2086
+  aws $AWS_ARGS s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" | grep " PRE " -v | while read -r line;
     do
-      fileName=`echo $line|awk {'print $4'}`
-      created=`echo $line|awk {'print $1" "$2'}`
-      created=`date -d "$created" +%s`
-      older_than=`date -d "$DELETE_OLDER_THAN" +%s`
-      if [ $created -lt $older_than ]
+      # shellcheck disable=SC1083
+      fileName=$(echo "$line"|awk {'print $4'})
+      # shellcheck disable=SC1083
+      created=$(echo "$line"|awk {'print $1" "$2'})
+      created=$(date -d "$created" +%s)
+      older_than=$(date -d "$DELETE_OLDER_THAN" +%s)
+      if [ "$created" -lt "$older_than" ]
         then
-          if [ $fileName != "" ]
+          if [ "$fileName" != "" ]
             then
               >&2 echo "DELETING ${fileName}"
-              aws $AWS_ARGS s3 rm s3://$S3_BUCKET/$S3_PREFIX/$fileName
+              aws $AWS_ARGS s3 rm "s3://$S3_BUCKET/$S3_PREFIX/$fileName"
           fi
       else
           >&2 echo "${fileName} not older than ${DELETE_OLDER_THAN}"
@@ -160,4 +165,4 @@ fi
 ########################################################
 
 echo "Database backup completed!"
-echo "=============================="
+echo ""

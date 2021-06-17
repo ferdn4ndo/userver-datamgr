@@ -3,9 +3,7 @@
 set -e
 set -o pipefail
 
-echo "=============================="
-echo "== Database Backup Creation =="
-echo "=============================="
+echo "=== Database Backup Creation ==="
 
 ########################################################
 ## Environment check section
@@ -65,7 +63,7 @@ export PGPASSWORD=$POSTGRES_PASSWORD
 POSTGRES_HOST_OPTS="-h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER $POSTGRES_EXTRA_OPTS"
 
 # prepare temp folder
-mkdir -p ${TEMP_PATH}
+mkdir -p "${TEMP_PATH}"
 
 ########################################################
 ## Listing backup files for restore section
@@ -74,10 +72,10 @@ mkdir -p ${TEMP_PATH}
 if [ $# -eq 0 ]; then
   echo "No backup file specified, listing possible values"
 
-  aws s3 ls s3://$S3_BUCKET/$S3_PREFIX/ | grep " PRE " -v | while read -r line;
+  aws s3 ls "s3://$S3_BUCKET/$S3_PREFIX/" | grep " PRE " -v | while read -r line;
     do
-      fileName=`echo $line|awk {'print $4'}`
-      created=`echo $line|awk {'print $1" "$2'}`
+      fileName=$(echo "$line"|awk {'print $4'})
+      created=$(echo "$line"|awk {'print $1" "$2'})
 
       echo "${created}: ${fileName}"
 
@@ -97,7 +95,7 @@ fi
 ########################################################
 
 REMOTE_FILE="$1"
-echo "Trying to download file $file"
+echo "Trying to download file ${REMOTE_FILE}"
 
 LOCAL_FILE="${TEMP_PATH}/${REMOTE_FILE}"
 aws s3 cp "s3://$S3_BUCKET/$S3_PREFIX/$REMOTE_FILE" "$LOCAL_FILE"
@@ -112,7 +110,7 @@ if [ "${FILE_EXT}" = "enc" ]; then
   echo "Decrypting file..."
   DECRYPTED_FILE=${LOCAL_FILE%.*}
   openssl enc -d -aes-256-cbc -md sha512 -pbkdf2 -iter 100000 -salt -in "${LOCAL_FILE}" -out "${DECRYPTED_FILE}" -k "${ENCRYPTION_PASSWORD}"
-  rm $LOCAL_FILE
+  rm "$LOCAL_FILE"
   LOCAL_FILE="${DECRYPTED_FILE}"
   echo "Decrypted file to ${LOCAL_FILE}"
 fi
@@ -144,7 +142,7 @@ if [ "${FILE_EXT}" != "sql" ]; then
 fi
 
 echo "Importing dump..."
-psql $POSTGRES_HOST_OPTS -f $LOCAL_FILE > /dev/null
+psql "$POSTGRES_HOST_OPTS" -f "$LOCAL_FILE" > /dev/null
 echo "Restore complete!"
 
 echo "Removing temp file..."
@@ -155,5 +153,4 @@ rm "${LOCAL_FILE}"
 ########################################################
 
 echo "Database restore completed!"
-echo "=============================="
-
+echo ""

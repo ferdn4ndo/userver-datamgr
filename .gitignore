@@ -13,6 +13,8 @@ tmp
 backup/temp/*
 !backup/temp/.gitkeep
 
+backup/logs/*
+!backup/logs/.gitkeep
 
 postgres/data/*
 !postgres/data/.gitkeep

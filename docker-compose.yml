@@ -59,6 +59,7 @@ services:
       - ./backup/.env
     volumes:
       - ./backup/scripts:/scripts
+      - ./backup/logs:/logs
       - ./backup/temp:/temp
     depends_on:
       - userver-postgres
