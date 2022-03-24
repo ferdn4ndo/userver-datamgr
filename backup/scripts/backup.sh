@@ -66,7 +66,7 @@ mkdir -p "${TEMP_PATH}"
 ## Temp folder cleanup
 ########################################################
 echo "Removing previous temp files..."
-rm -rf "${TEMP_PATH}"/*.*
+rm -rfv "${TEMP_PATH}"/*.*
 
 ########################################################
 ## Dump section
