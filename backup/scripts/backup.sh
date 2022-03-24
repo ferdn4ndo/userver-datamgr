@@ -8,7 +8,6 @@ echo "=== Database Backup Creation ==="
 ########################################################
 ## Environment check section
 ########################################################
-
 if [ "${S3_ACCESS_KEY_ID}" = "" ]; then
   echo "You need to set the S3_ACCESS_KEY_ID environment variable."
   exit 1
@@ -53,8 +52,6 @@ fi
 ########################################################
 ## Environment setup section
 ########################################################
-
-# env vars needed for aws tools
 export AWS_ACCESS_KEY_ID=$S3_ACCESS_KEY_ID
 export AWS_SECRET_ACCESS_KEY=$S3_SECRET_ACCESS_KEY
 export AWS_DEFAULT_REGION=$S3_REGION
@@ -66,9 +63,14 @@ POSTGRES_HOST_OPTS="-h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER $POSTG
 mkdir -p "${TEMP_PATH}"
 
 ########################################################
+## Temp folder cleanup
+########################################################
+echo "Removing previous temp files..."
+rm -rfv "${TEMP_PATH}"/*.*
+
+########################################################
 ## Dump section
 ########################################################
-
 DEST_FILE=${BACKUP_PREFIX}_$(date +"%Y-%m-%dT%H-%M-%SZ").sql
 LOCAL_FILE="${TEMP_PATH}/${DEST_FILE}"
 if [ "${POSTGRES_DATABASE}" != "" ]; then
@@ -85,7 +87,6 @@ echo "Created dump file ${LOCAL_FILE}"
 ########################################################
 ## Compression section
 ########################################################
-
 if [ "${XZ_COMPRESSION_LEVEL}" = "0" ] || [ "${SKIP_COMPRESSION}" = "1" ]; then
   echo "Skipping compression"
 else
@@ -107,7 +108,6 @@ fi
 ########################################################
 ## Encryption section
 ########################################################
-
 if [ "${ENCRYPTION_PASSWORD}" != "" ]; then
   echo "Encrypting..."
   ENC_FILE="${LOCAL_FILE}.enc"
@@ -124,7 +124,6 @@ fi
 ########################################################
 ## Upload section
 ########################################################
-
 echo "Uploading dump to $S3_BUCKET"
 # shellcheck disable=SC2086
 UPLOAD_RESULT=$(aws $AWS_ARGS s3 cp - "s3://$S3_BUCKET/$S3_PREFIX/$DEST_FILE" < "$LOCAL_FILE")
@@ -163,6 +162,5 @@ fi
 ########################################################
 ## END
 ########################################################
-
 echo "Database backup completed!"
 echo ""
