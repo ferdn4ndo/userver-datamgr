@@ -2,10 +2,8 @@ version: '3'
 services:
   userver-postgres:
     container_name: userver-postgres
-    restart: unless-stopped
-    build:
-      context: ./postgres
-      dockerfile: Dockerfile
+    image: postgres:12-alpine
+    command: postgres -c config_file=/etc/postgresql/config/postgresql.conf
     env_file:
       - ./postgres/.env
     volumes:
@@ -22,7 +20,6 @@ services:
   userver-redis:
     image: redis
     container_name: userver-redis
-    restart: unless-stopped
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
     ports:
@@ -36,7 +33,6 @@ services:
   userver-adminer:
     image: adminer
     container_name: userver-adminer
-    restart: unless-stopped
     env_file:
       - ./adminer/.env
     depends_on:
@@ -50,23 +46,17 @@ services:
       retries: 3
 
   userver-databackup:
-    build:
-      context: ./backup
-      dockerfile: Dockerfile
+    image: ferdn4ndo/s3-postgres-backup:latest
     container_name: userver-databackup
-    restart: unless-stopped
     env_file:
       - ./backup/.env
-    volumes:
-      - ./backup/scripts:/scripts
-      - ./backup/temp:/temp
     depends_on:
       - userver-postgres
 
 networks:
   default:
-    external:
-      name: nginx-proxy
+    external: true
+    name: nginx-proxy
 
 volumes:
   dbdata:
