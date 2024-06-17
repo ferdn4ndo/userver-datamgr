@@ -12,46 +12,31 @@ jobs: # Docs: <https://git.io/JvxXE>
     name: Run the End-to-End (E2E) Automated Tests (AT)
     runs-on: ubuntu-20.04
     steps:
+      - name: Check out code from uServer-Web
+        uses: actions/checkout@v4
+        with:
+          repository: ferdn4ndo/userver-web
+          path: userver-web
+
+      - name: Build and deploy uServer Web services
+        uses: ./userver-web/.github/actions/deploy_local
+        with:
+          monitor-virtual-host: "monitor.userver.lan"
+          whoami-virtual-host: "whoami.userver.lan"
+
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Prepare the environment
-        run: |
-          echo "== LETSENCRYPT ENV =="
-          cp ./letsencrypt/.env.template ./letsencrypt/.env
-          cat ./letsencrypt/.env
-
-          echo "== MONITOR ENV =="
-          cp ./monitor/.env.template ./monitor/.env
-          sed -i 's/VIRTUAL_HOST=/VIRTUAL_HOST=monitor.userver.lan/g' ./monitor/.env
-          cat ./monitor/.env
-
-          echo "== NGINX-PROXY ENV =="
-          cp ./nginx-proxy/.env.template ./nginx-proxy/.env
-          cat ./nginx-proxy/.env
-
-          echo "== WHOAMI ENV =="
-          cp ./whoami/.env.template ./whoami/.env
-          sed -i 's/VIRTUAL_HOST=/VIRTUAL_HOST=whoami.userver.lan/g' ./whoami/.env
-        shell: bash
-
-      - name: Add hosts to /etc/hosts
-        run: |
-          sudo echo "127.0.0.1 monitor.userver.lan" | sudo tee -a /etc/hosts
-          sudo echo "127.0.0.1 whoami.userver.lan" | sudo tee -a /etc/hosts
-          echo "== HOSTS FILE CONTENT =="
-          sudo cat /etc/hosts
-        shell: bash
-
-      - name: Create the docker network
-        run: >
-          docker network create nginx-proxy
-        shell: bash
-
-      - name: Try to run containers
-        run: >
-          docker compose up -d --build --remove-orphans
-        shell: bash
+      - name: Build and deploy uServer Web services
+        uses: ./.github/actions/deploy_local
+        with:
+          adminer-virtual-host: "adminer.userver.lan"
+          aws-s3-access-key-id: "${{ secrets.S3_ACCESS_KEY_ID }}"
+          aws-s3-secret-access-key: "${{ secrets.S3_SECRET_ACCESS_KEY }}"
+          aws-s3-bucket: "${{ secrets.S3_BUCKET }}"
+          aws-s3-region: "${{ secrets.S3_REGION }}"
+          postgres-password: "${{ secrets.POSTGRES_PASSWORD }}"
+          backup-encryption-password: "${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}"
 
       - name: Wait 10 seconds for startup
         run: sleep 10s
