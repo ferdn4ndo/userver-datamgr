@@ -28,7 +28,7 @@ jobs: # Docs: <https://git.io/JvxXE>
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Build and deploy uServer Web services
+      - name: Build and deploy uServer DataMgr services
         uses: ./.github/actions/deploy_local
         with:
           adminer-virtual-host: "adminer.userver.lan"

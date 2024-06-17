@@ -124,7 +124,7 @@ runs:
 
     - name: Verify if the service URLs are up
       env:
-        ADMINER_URL: "http://${{ inputs.adminer-virtual-host }}"
+        ADMINER_URL: "http://${{ inputs.adminer-virtual-host }}/"
       run: |
         echo "Testing uServer-Adminer at '${{ env.ADMINER_URL }}'"
         curl --fail "${{ env.ADMINER_URL }}" || exit 1
