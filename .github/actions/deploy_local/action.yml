@@ -126,6 +126,7 @@ runs:
       env:
         ADMINER_URL: "http://${{ inputs.adminer-virtual-host }}/"
       run: |
+        ls -la
         sudo cat ./userver-web/nginx-proxy/conf/default.conf
         echo "Testing uServer-Adminer at '${{ env.ADMINER_URL }}'"
         curl --fail "${{ env.ADMINER_URL }}" || exit 1
