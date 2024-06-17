@@ -1,0 +1,126 @@
+########################################################################################
+# Composite action for deployment of the uServer-DataMgr services locally              #
+#--------------------------------------------------------------------------------------#
+# Requirement: actions/checkout@v4 in this repo                                        #
+#                                                                                      #
+# Usage in workflows steps:                                                            #
+#                                                                                      #
+#      - name: Build and deploy uServer DataMgr services                               #
+#        uses: ./.github/actions/deploy_local                                          #
+#        with:                                                                         #
+#          adminer-virtual-host: "adminer.userver.lan"                                 #
+#          aws-s3-access-key-id: "${{ secrets.S3_ACCESS_KEY_ID }}"                     #
+#          aws-s3-secret-access-key: "${{ secrets.S3_SECRET_ACCESS_KEY }}"             #
+#          aws-s3-bucket: "${{ secrets.S3_BUCKET }}"                                   #
+#          aws-s3-region: "${{ secrets.S3_REGION }}"                                   #
+#          postgres-password: "${{ secrets.POSTGRES_PASSWORD }}"                       #
+#          backup-encryption-password: "${{ secrets.BACKUP_ENCRYPTION_PASSWORD }}"     #
+########################################################################################
+
+name: "Container building and deployment"
+description: "Build a docker image and send it to ECS and trigger the deployment to EKS"
+inputs:
+  adminer-virtual-host:
+    description: "The hostname (VIRTUAL_HOST) of the uServer-Adminer service."
+    required: true
+    default: "monitor.userver.lan"
+  aws-s3-access-key-id:
+    description: "AWS CI/CD IAM Access Key to upload the postgres backups to S3."
+    required: true
+  aws-s3-secret-access-key:
+    description: "AWS CI/CD IAM Secret Access Key to upload the postgres backups to S3."
+    required: true
+  aws-s3-bucket:
+    description: "AWS Postgres Backups S3 bucket name."
+    required: true
+  aws-s3-region:
+    description: "AWS CI/CD Region where the S3 bucket is located."
+    required: true
+  postgres-password:
+    description: "The password of the Postgres root user."
+    required: true
+  backup-encryption-password:
+    description: "The password to encrypt the Postgres zipped backups."
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Prepare the environment
+      env:
+        ADMINER_VIRTUAL_HOST: "${{ inputs.adminer-virtual-host }}"
+        POSTGRES_HOST: "userver-postgres"
+        POSTGRES_PORT: 5432
+        POSTGRES_USER: "postgres"
+        POSTGRES_PASSWORD: ${{ inputs.postgres-password }}
+        SCHEDULE: "@every 6h"
+        ENCRYPTION_PASSWORD: ${{ inputs.backup-encryption-password }}
+        TEMP_PATH: "/temp"
+        XZ_COMPRESSION_LEVEL: 6
+        BACKUP_PREFIX: "postgres-test-dump-${{ github.run_id }}"
+        RUN_AT_STARTUP: 1
+        STARTUP_BKP_DELAY_SECS: 5
+        S3_REGION: "${{ inputs.aws-s3-region }}"
+        S3_BUCKET: "${{ inputs.aws-s3-bucket }}"
+        S3_ACCESS_KEY_ID: "${{ inputs.aws-s3-access-key-id }}"
+        S3_SECRET_ACCESS_KEY: "${{ inputs.aws-s3-secret-access-key }}"
+        S3_PREFIX: "userver-datamgr-gh-action-deploy-local"
+      run: |
+        echo "== ADMINER ENV =="
+        cp ./adminer/.env.template ./adminer/.env
+        sed -i 's#VIRTUAL_HOST=#VIRTUAL_HOST=${{ env.ADMINER_VIRTUAL_HOST }}#g' ./adminer/.env
+        cat ./adminer/.env
+
+        echo "== BACKUP ENV =="
+        cp ./backup/.env.template ./backup/.env
+        sed -i 's/POSTGRES_DATABASE=<db>/POSTGRES_DATABASE=/g' ./backup/.env
+        sed -i 's#POSTGRES_HOST=<host>#POSTGRES_HOST=${{ env.POSTGRES_HOST }}#g' ./backup/.env
+        sed -i 's/POSTGRES_PORT=5432/POSTGRES_PORT=${{ env.POSTGRES_PORT }}/g' ./backup/.env
+        sed -i 's/POSTGRES_USER=<user>/POSTGRES_USER=${{ env.POSTGRES_USER }}/g' ./backup/.env
+        sed -i 's/POSTGRES_PASSWORD=<password>/POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}/g' ./backup/.env
+        sed -i 's/ENCRYPTION_PASSWORD=<password>/ENCRYPTION_PASSWORD=${{ env.ENCRYPTION_PASSWORD }}/g' ./backup/.env
+        DELETE_OLDER_THAN=$(date -d "yesterday 00:00" '+%Y-%m-%d')
+        sed -i 's/DELETE_OLDER_THAN=/DELETE_OLDER_THAN=$DELETE_OLDER_THAN/g' ./backup/.env
+        sed -i 's/S3_REGION=<region>/S3_REGION=${{ env.S3_REGION }}/g' ./backup/.env
+        sed -i 's/S3_BUCKET=<bucket>/S3_BUCKET=${{ env.S3_BUCKET }}/g' ./backup/.env
+        sed -i 's/S3_ACCESS_KEY_ID=<key_id>/S3_ACCESS_KEY_ID=${{ env.S3_ACCESS_KEY_ID }}/g' ./backup/.env
+        sed -i 's/S3_SECRET_ACCESS_KEY=<access_key>/S3_SECRET_ACCESS_KEY=${{ env.S3_SECRET_ACCESS_KEY }}/g' ./backup/.env
+        sed -i 's/S3_PREFIX=/S3_PREFIX=${{ env.S3_PREFIX }}/g' ./backup/.env
+        cat ./backup/.env
+
+        echo "== POSTGRES ENV =="
+        cp ./postgres/.env.template ./postgres/.env
+        sed -i 's/POSTGRES_PASSWORD=/POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}/g' ./postgres/.env
+        cat ./postgres/.env
+      shell: bash
+
+    - name: Add hosts to /etc/hosts
+      env:
+        ADMINER_VIRTUAL_HOST: "${{ inputs.adminer-virtual-host }}"
+      run: |
+        sudo echo -e "\n# uServer-DataMgr local services" | sudo tee -a /etc/hosts
+        sudo echo "127.0.0.1 ${{ env.ADMINER_VIRTUAL_HOST }}" | sudo tee -a /etc/hosts
+        echo "== HOSTS FILE CONTENT =="
+        sudo cat /etc/hosts
+      shell: bash
+
+    - name: Create the docker network if not exists
+      env:
+        NETWORK_NAME: "nginx-proxy"
+      run: |
+        if [ -z $(docker network ls --filter name=^${NETWORK_NAME}$ --format="{{ .Name }}") ] ; then
+            docker network create ${NETWORK_NAME} ;
+        fi
+      shell: bash
+
+    - name: Try to run containers
+      run: >
+        docker compose up --build --remove-orphans --detach --wait --wait-timeout 30
+      shell: bash
+
+    - name: Verify if the service URLs are up
+      env:
+        ADMINER_URL: "http://${{ inputs.monitor-virtual-host }}"
+      run: |
+        echo "Testing uServer-Adminer at '${{ env.ADMINER_URL }}'"
+        curl --fail "${{ env.ADMINER_URL }}" || exit 1
+      shell: bash
