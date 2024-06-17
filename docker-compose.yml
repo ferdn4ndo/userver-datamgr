@@ -31,7 +31,9 @@ services:
       retries: 30
 
   userver-adminer:
-    image: adminer:4-standalone
+    build:
+      context: adminer
+      dockerfile: Dockerfile
     container_name: userver-adminer
     env_file:
       - ./adminer/.env
