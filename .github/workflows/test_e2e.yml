@@ -23,6 +23,7 @@ jobs: # Docs: <https://git.io/JvxXE>
         with:
           monitor-virtual-host: "monitor.userver.lan"
           whoami-virtual-host: "whoami.userver.lan"
+        working-directory: ./userver-web
 
       - name: Check out code
         uses: actions/checkout@v4
