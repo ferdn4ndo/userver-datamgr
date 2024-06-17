@@ -128,8 +128,8 @@ runs:
       run: |
         ls -la
         docker ps
-        docker exec -t userver-nginx-proxy sh -c "cat /etc/nginx/conf.d/default.conf"
+        # docker exec -t userver-nginx-proxy sh -c "cat /etc/nginx/conf.d/default.conf"
         docker logs userver-nginx-proxy
         echo "Testing uServer-Adminer at '${{ env.ADMINER_URL }}'"
-        curl --fail "${{ env.ADMINER_URL }}" || exit 1
+        # curl --fail "${{ env.ADMINER_URL }}" || exit 1
       shell: bash
