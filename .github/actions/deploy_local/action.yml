@@ -117,6 +117,11 @@ runs:
         docker compose up --build --remove-orphans --detach --wait --wait-timeout 60
       shell: bash
 
+    - name: Wait 10 seconds to boot
+      run: |
+        sleep 10
+      shell: bash
+
     - name: Verify if the service URLs are up
       env:
         ADMINER_URL: "http://${{ inputs.adminer-virtual-host }}"
