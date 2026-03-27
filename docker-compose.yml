@@ -1,4 +1,3 @@
-version: '3'
 services:
   userver-postgres:
     container_name: userver-postgres

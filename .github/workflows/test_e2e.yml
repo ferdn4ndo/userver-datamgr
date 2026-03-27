@@ -10,7 +10,7 @@ on:
 jobs: # Docs: <https://git.io/JvxXE>
   run-ats:
     name: Run the End-to-End (E2E) Automated Tests (AT)
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-latest
     steps:
       - name: Check out code from uServer-Web
         uses: actions/checkout@v4
