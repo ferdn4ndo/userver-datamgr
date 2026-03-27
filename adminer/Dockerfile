@@ -1,4 +1,4 @@
-FROM adminer:4-standalone
+FROM adminer:5-standalone
 
 USER root
 

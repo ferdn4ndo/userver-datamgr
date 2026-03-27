@@ -2,7 +2,7 @@ version: '3'
 services:
   userver-postgres:
     container_name: userver-postgres
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     command: postgres -c config_file=/etc/postgresql/config/postgresql.conf
     env_file:
       - ./postgres/.env
@@ -18,7 +18,7 @@ services:
       retries: 5
 
   userver-redis:
-    image: redis:7.0-alpine
+    image: redis:8.6-alpine
     container_name: userver-redis
     volumes:
       - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
@@ -31,9 +31,7 @@ services:
       retries: 30
 
   userver-adminer:
-    build:
-      context: adminer
-      dockerfile: Dockerfile
+    image: adminer:5-standalone
     container_name: userver-adminer
     env_file:
       - ./adminer/.env
@@ -48,7 +46,7 @@ services:
       retries: 3
 
   userver-databackup:
-    image: ferdn4ndo/s3-postgres-backup:1.1.1
+    image: ferdn4ndo/s3-postgres-backup:1.1.2
     container_name: userver-databackup
     env_file:
       - ./backup/.env
