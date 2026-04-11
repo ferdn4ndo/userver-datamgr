@@ -67,7 +67,7 @@ runs:
       run: |
         echo "== ADMINER ENV =="
         cp ./adminer/.env.template ./adminer/.env
-        sed -i 's#VIRTUAL_HOST=#VIRTUAL_HOST=${{ env.ADMINER_VIRTUAL_HOST }}#g' ./adminer/.env
+        sed -i 's#^VIRTUAL_HOST=.*#VIRTUAL_HOST=${{ env.ADMINER_VIRTUAL_HOST }}#' ./adminer/.env
         cat ./adminer/.env
 
         echo "== BACKUP ENV =="
@@ -79,17 +79,17 @@ runs:
         sed -i 's/POSTGRES_PASSWORD=<password>/POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}/g' ./backup/.env
         sed -i 's/ENCRYPTION_PASSWORD=<password>/ENCRYPTION_PASSWORD=${{ env.ENCRYPTION_PASSWORD }}/g' ./backup/.env
         DELETE_OLDER_THAN=$(date -d "yesterday 00:00" '+%Y-%m-%d')
-        sed -i 's/DELETE_OLDER_THAN=/DELETE_OLDER_THAN=$DELETE_OLDER_THAN/g' ./backup/.env
+        sed -i "s/^DELETE_OLDER_THAN=.*/DELETE_OLDER_THAN=${DELETE_OLDER_THAN}/" ./backup/.env
         sed -i 's/S3_REGION=<region>/S3_REGION=${{ env.S3_REGION }}/g' ./backup/.env
         sed -i 's/S3_BUCKET=<bucket>/S3_BUCKET=${{ env.S3_BUCKET }}/g' ./backup/.env
         sed -i 's/S3_ACCESS_KEY_ID=<key_id>/S3_ACCESS_KEY_ID=${{ env.S3_ACCESS_KEY_ID }}/g' ./backup/.env
         sed -i 's/S3_SECRET_ACCESS_KEY=<access_key>/S3_SECRET_ACCESS_KEY=${{ env.S3_SECRET_ACCESS_KEY }}/g' ./backup/.env
-        sed -i 's/S3_PREFIX=/S3_PREFIX=${{ env.S3_PREFIX }}/g' ./backup/.env
+        sed -i 's/^S3_PREFIX=.*/S3_PREFIX=${{ env.S3_PREFIX }}/' ./backup/.env
         cat ./backup/.env
 
         echo "== POSTGRES ENV =="
         cp ./postgres/.env.template ./postgres/.env
-        sed -i 's/POSTGRES_PASSWORD=/POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}/g' ./postgres/.env
+        sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}/' ./postgres/.env
         cat ./postgres/.env
       shell: bash
 
