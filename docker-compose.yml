@@ -2,12 +2,20 @@ services:
   userver-postgres:
     container_name: userver-postgres
     image: postgres:18-alpine
-    command: postgres -c config_file=/etc/postgresql/config/postgresql.conf
+    environment:
+      POSTGRES_SSL_CERT_BASENAME: ${POSTGRES_SSL_CERT_BASENAME:-}
+    entrypoint:
+      - /usr/local/bin/docker-ensure-tls.sh
     env_file:
       - ./postgres/.env
     volumes:
       - ./postgres/config:/etc/postgresql/config
-      - dbdata:/var/lib/postgresql/data
+      - ./postgres/docker-ensure-tls.sh:/usr/local/bin/docker-ensure-tls.sh:ro
+      - ./postgres/ssl:/etc/postgresql/ssl-local:ro
+      # userver-web stores nginx-proxy / acme-companion certs here (prod). Stub keeps the mount valid when unset.
+      - ${USERVER_WEB_CERTS_DIR:-./postgres/.nginx-certs-stub}:/etc/nginx/certs:ro
+      # PG 18+ official image: persist the whole tree under /var/lib/postgresql (default PGDATA …/18/docker).
+      - dbdata:/var/lib/postgresql
     ports:
       - "5432:5432"
     healthcheck:
@@ -16,6 +24,15 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+
+  # Serves HTTP for the Postgres TLS hostname so acme-companion can complete HTTP-01 (same stack as userver-web).
+  userver-postgres-acme:
+    container_name: userver-postgres-acme
+    image: traefik/whoami:v1.11
+    env_file:
+      - ./postgres/certs-helper.env
+    expose:
+      - 80
 
   userver-redis:
     image: redis:8.6-alpine
