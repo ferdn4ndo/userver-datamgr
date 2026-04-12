@@ -19,11 +19,13 @@ services:
     ports:
       - "5432:5432"
     healthcheck:
-      # Must match POSTGRES_USER in postgres/.env (defaults to postgres if unset).
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-postgres}\""]
-      interval: 10s
+      # Use TCP (-h 127.0.0.1) so "healthy" matches what other containers need; unix-socket-only ready is too early.
+      # start_period: long first-time initdb on slow disks without failing the service.
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER:-postgres}\" -h 127.0.0.1 -p 5432"]
+      interval: 5s
       timeout: 5s
-      retries: 5
+      retries: 30
+      start_period: 120s
 
   # Serves HTTP for the Postgres TLS hostname so acme-companion can complete HTTP-01 (same stack as userver-web).
   userver-postgres-acme:
@@ -53,7 +55,8 @@ services:
     env_file:
       - ./adminer/.env
     depends_on:
-      - userver-postgres
+      userver-postgres:
+        condition: service_healthy
     expose:
       - 8080
     healthcheck:
@@ -68,7 +71,8 @@ services:
     env_file:
       - ./backup/.env
     depends_on:
-      - userver-postgres
+      userver-postgres:
+        condition: service_healthy
 
 networks:
   default:
