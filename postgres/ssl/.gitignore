@@ -1,0 +1,4 @@
+# Generated or deployed TLS material — do not commit
+*.crt
+*.key
+*.pem

@@ -91,6 +91,13 @@ runs:
         cp ./postgres/.env.template ./postgres/.env
         sed -i 's/^POSTGRES_PASSWORD=.*/POSTGRES_PASSWORD=${{ env.POSTGRES_PASSWORD }}/' ./postgres/.env
         cat ./postgres/.env
+
+        echo "== postgres/certs-helper.env (userver-postgres-acme) =="
+        cp ./postgres/certs-helper.env.template ./postgres/certs-helper.env
+        sed -i 's/^VIRTUAL_HOST=.*/VIRTUAL_HOST=postgres.userver.lan/' ./postgres/certs-helper.env
+
+        echo "== TLS (ssl-local) =="
+        ./postgres/generate-ssl.sh
       shell: bash
 
     - name: Add hosts to /etc/hosts
